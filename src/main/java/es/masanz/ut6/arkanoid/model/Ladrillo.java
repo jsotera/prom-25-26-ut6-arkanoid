@@ -37,6 +37,14 @@ public class Ladrillo extends Sprite {
 
     public Potenciador obtenerPotenciador() {
         // TODO 05: Devolver un potenciador u otro con la probabilidad que se desee
+        int random = (int) (Math.random()*100);
+        if(random>75){
+            return new PotAnchura(x, y);
+        } else if (random>50) {
+            return new PotAnchuraNeg(x, y);
+        } else if (random>25) {
+            return new PotVelocidad(x, y);
+        }
         return null;
     }
 

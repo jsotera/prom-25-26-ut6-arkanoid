@@ -7,6 +7,7 @@ public class NivelService {
 
     public static Nivel obtenerNivel(int id) {
         // TODO 02: Buscar y devolver el nivel en caso de existir
-        return null;
+        Nivel nivel = NivelDao.obtenerNivel(id);
+        return nivel;
     }
 }

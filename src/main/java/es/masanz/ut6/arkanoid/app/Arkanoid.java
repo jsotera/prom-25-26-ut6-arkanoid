@@ -18,6 +18,8 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -48,7 +50,7 @@ public class Arkanoid extends Application {
         Scene scene = new Scene(root);
 
         // TODO 11: inicializa el nivel
-        nivel = null;
+        nivel = NivelService.obtenerNivel(4);
 
         lienzo = new Canvas();
         generarMapa();
@@ -91,6 +93,18 @@ public class Arkanoid extends Application {
         //  La lista de "bolas" debera contener unicamente la bola que esta aqui definida
         //  La lista de "ladrillos" la deberas obtener del nivel
         Bola bola = new Bola(nivel.getColumnas() / 2 * TAM_CASILLA, (nivel.getFilas()-4) * TAM_CASILLA);
+
+        List<Sprite> ladrillos = new ArrayList<>();
+        List<Sprite> bolas = new ArrayList<>();
+        List<Sprite> potenciadores = new ArrayList<>();
+
+        ladrillos.addAll(nivel.getLadrillos());
+        bolas.add(bola);
+
+        sprites = new HashMap<>();
+        sprites.put("ladrillos", ladrillos);
+        sprites.put("bolas", bolas);
+        sprites.put("potenciadores", potenciadores);
 
         // NO TOCAR ESTAS LINEAS
         paleta = new Paleta(nivel.getColumnas()/2 - TAM_CASILLA*6/2, (nivel.getFilas()-3)*TAM_CASILLA, 4, TAM_CASILLA*6, TAM_CASILLA, 0, 0);
@@ -144,11 +158,20 @@ public class Arkanoid extends Application {
 
     private void moverLadrillos() {
         // TODO 13: Deberas mover todos los ladrillos
+        for (Sprite ladrillo : sprites.get("ladrillos")) {
+            ladrillo.mover(nivel);
+        }
     }
 
     private List<Sprite> moverBolas() {
         // TODO 14: Deberas mover todas las bolas y devolver aquellas que no se puedan mover
-        return null;
+        List<Sprite> eliminarBolas = new ArrayList<>();
+        for (Sprite bola : sprites.get("bolas")) {
+            if(!bola.mover(nivel)){
+                eliminarBolas.add(bola);
+            }
+        }
+        return eliminarBolas;
     }
 
     private List<Sprite> moverPotenciadores() {
@@ -156,11 +179,28 @@ public class Arkanoid extends Application {
         //  o bien que despues de moverse esten en colision con la paleta.
         //  Adicionalmente, si entra en contacto con la paleta, se debera aplicar
         //  su efecto a todos los sprites que pueda afectar su potenciacion (a la paleta, bolas, etc)
-        return null;
+        List<Sprite> eliminarPotenciadores = new ArrayList<>();
+        for (Sprite potenciador : sprites.get("potenciadores")) {
+            if(!potenciador.mover(nivel)){
+                eliminarPotenciadores.add(potenciador);
+            } else {
+                if(potenciador.hayColision(paleta)){
+                    eliminarPotenciadores.add(potenciador);
+                    List<Sprite> paletas = new ArrayList<>();
+                    paletas.add(paleta);
+                    ((Potenciador)potenciador).aplicarEfecto(paletas);
+                    ((Potenciador)potenciador).aplicarEfecto(sprites.get("bolas"));
+                }
+            }
+        }
+        return eliminarPotenciadores;
     }
 
     private void eliminarPotenciadores(List<Sprite> eliminarPotenciadores) {
         // TODO 16: Deberas eliminar los potenciadores indicados del mapa de sprites
+        for (Sprite eliminarPotenciador : eliminarPotenciadores) {
+            sprites.get("potenciadores").remove(eliminarPotenciador);
+        }
     }
 
     private List<Sprite> colisionesLadrillos() {
@@ -168,21 +208,48 @@ public class Arkanoid extends Application {
         //  En caso de que haya colision, invoca al metodo hayColision de la bola con la que colisiona el ladrillo
         //  y al metodo morir del propio ladrillo. Deberas devolver todos los ladrillos que se mueran.
         //  OPCIONAL: Aqui se pueden ampliar los puntos del juego si se desea
-        return null;
+        List<Sprite> eliminarLadrillos = new ArrayList<>();
+        for(Sprite ladrillo : sprites.get("ladrillos")){
+            for (Sprite bola : sprites.get("bolas")) {
+                if(ladrillo.hayColision(bola)){
+                    puntos = puntos + 3*((Ladrillo) ladrillo).getVidas();
+                    if(((Ladrillo) ladrillo).morir()){
+                        eliminarLadrillos.add(ladrillo);
+                    }
+                    bola.hayColision(ladrillo);
+                    break;
+                }
+            }
+        }
+        return eliminarLadrillos;
     }
 
     private void eliminarLadrillos(List<Sprite> eliminarLadrillos) {
         // TODO 18: Deberas eliminar los ladrillos indicados del mapa de sprites.
         //  Ademas, para cada ladrillo eliminado, se debera validar si genera un potenciador.
         //  En caso de generar uno, se debera incluir al listado de potenciadores del mapa de sprites
+        for (Sprite eliminarLadrillo : eliminarLadrillos) {
+            sprites.get("ladrillos").remove(eliminarLadrillo);
+
+            Sprite potenciador = ((Ladrillo) eliminarLadrillo).obtenerPotenciador();
+            if(potenciador!=null){
+                sprites.get("potenciadores").add(potenciador);
+            }
+        }
     }
 
     private void eliminarBolas(List<Sprite> eliminarBolas) {
         // TODO 19: Deberas eliminar las bolas indicadas del mapa de sprites.
+        for (Sprite bola : eliminarBolas) {
+            sprites.get("bolas").remove(bola);
+        }
     }
 
     private void colisionBolas() {
         // TODO 20: Deberas analizar si hay colision entre las bolas y la paleta del juego.
+        for (Sprite bola : sprites.get("bolas")) {
+            bola.hayColision(paleta);
+        }
     }
 
     private void pintar() {
@@ -212,6 +279,17 @@ public class Arkanoid extends Application {
 
     private void pintarSprites(GraphicsContext gc) {
         // TODO 21: Deberas pintar todos los sprites del juego
+        for (Sprite ladrillo : sprites.get("ladrillos")) {
+            ladrillo.pintar(gc);
+        }
+
+        for (Sprite bola : sprites.get("bolas")) {
+            bola.pintar(gc);
+        }
+
+        for (Sprite potenciador : sprites.get("potenciadores")) {
+            potenciador.pintar(gc);
+        }
     }
 
     private void pintarPausa(String msg) {
